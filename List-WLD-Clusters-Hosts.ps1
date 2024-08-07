@@ -16,6 +16,9 @@ $vSphereClientPassword = "VMware123!"
 $NSXManagerUsername = "admin"
 $NSXManagerPassword = "VMware123!VMware123!"
 
+$VRSLCMIP = "10.60.0.150"
+$VRSLCMURL = "vrslcm.vcf.sddc.lab"
+
 $ESXiHostsUsername = "root"
 $ESXiHostsPassword = "VMware123!"
 
@@ -134,6 +137,40 @@ function Get-NSXClusterDetails {
     return $NSXclusterDetails
 }
 
+# Function to deploy vRealize Suite Lifecycle Manager (vRSLCM)
+function Deploy-vRSLCM {
+    param (
+        [string]$FQDN,                     # Fully qualified domain name for the vRSLCM
+        [string]$SSHPassword,              # Password for SSH access to the vRSLCM
+        [string]$APIPassword,              # Password for the API access to the vRSLCM
+        [string]$NSXTTier1IP               # NSX-T standalone Tier-1 IP address
+    )
+
+    # Build the JSON body for the API request
+    $body = @{
+        fqdn = $FQDN
+        sshPassword = $SSHPassword
+        apiPassword = $APIPassword
+        nsxtStandaloneTier1Ip = $NSXTTier1IP
+    }
+
+    try {
+        # Invoke the API to deploy vRSLCM
+        $response = Invoke-SDDCManagerAPI -Method "POST" -ApiEndpoint "/v1/vrslcms" -Body $body
+
+        if ($null -eq $response) {
+            Write-Error "Failed to deploy vRSLCM."
+        } else {
+            Write-Host "vRSLCM deployed successfully."
+            Write-Host "vRSLCM ID: $($response.id)"
+            Write-Host "vRSLCM Status: $($response.status)"
+        }
+    } catch {
+        Write-Error "Error deploying vRSLCM: $_"
+    }
+}
+
+
 # Function to retrieve host details
 function Get-HostDetails {
     param (
@@ -192,6 +229,11 @@ foreach ($domain in $domains) {
     $NSXManagerURL = $NSXclusterDetails.vipFqdn
     Write-Host " ----------------------------------------------------------- "
 
+
+    $output = Deploy-vRSLCM -FQDN $VRSLCMURL -SSHPassword $SDDCManagerPassword -APIPassword $SDDCManagerPassword -NSXTTier1IP $VRSLCMIP
+    Write-Host $output
+
+    
     # Retrieve Clusters within the Domain
     foreach ($cluster in $domain.clusters) {
         Write-Host "`nRetrieving information for Cluster ID: $($cluster.id)"
