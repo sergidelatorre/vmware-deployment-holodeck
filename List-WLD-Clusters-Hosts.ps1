@@ -104,43 +104,48 @@ if ($null -eq $workloadDomains) {
     exit
 }
 
-# Debug: Check full JSON response structure
-Write-Host "Full JSON response for domains: $(ConvertTo-Json $workloadDomains -Depth 10)"
 
 # Print Workload Domains and Clusters
-foreach ($domain in $workloadDomains.elements) {  # Assuming the correct JSON key based on documentation
-    Write-Host "Workload Domain: $($domain.displayName)"
+foreach ($domain in $workloadDomains.elements) {
+    Write-Host "Workload Domain: $($domain.name)"
     Write-Host "  Domain ID: $($domain.id)"
-    Write-Host "  Domain Type: $($domain.domainType)"
+    Write-Host "  Organization Name: $($domain.orgName)"
+    Write-Host "  Status: $($domain.status)"
+    Write-Host "  Upgrade State: $($domain.upgradeState)"
+    Write-Host "  VRA Integration Status: $($domain.vraIntegrationStatus)"
+    Write-Host "  VROPS Integration Status: $($domain.vropsIntegrationStatus)"
+    Write-Host "  VRLI Integration Status: $($domain.vrliIntegrationStatus)"
+    Write-Host "  SSO Name: $($domain.ssoName)"
+    Write-Host "  Is Management SSO Domain: $($domain.isManagementSsoDomain)"
+    Write-Host "  Lifecycle Management Mode: $($domain.lifecycleManagementMode)"
 
-    # Debug: Print the entire domain object
-    Write-Host "Domain Object: $(ConvertTo-Json $domain -Depth 5)"
+    # Print licensing info
+    Write-Host "  Licensing Info:"
+    Write-Host "    Licensing Mode: $($domain.licensingInfo.licensingMode)"
+    Write-Host "    Subscription Status: $($domain.licensingInfo.subscriptionStatus)"
+    Write-Host "    Is Registered: $($domain.licensingInfo.isRegistered)"
+    Write-Host "    Is Subscribed: $($domain.licensingInfo.isSubscribed)"
+
+    # Print capacity details
+    Write-Host "  Capacity:"
+    Write-Host "    CPU: Used - $($domain.capacity.cpu.used.value)$($domain.capacity.cpu.used.unit), Total - $($domain.capacity.cpu.total.value)$($domain.capacity.cpu.total.unit)"
+    Write-Host "    Memory: Used - $($domain.capacity.memory.used.value)$($domain.capacity.memory.used.unit), Total - $($domain.capacity.memory.total.value)$($domain.capacity.memory.total.unit)"
+    Write-Host "    Storage: Used - $($domain.capacity.storage.used.value)$($domain.capacity.storage.used.unit), Total - $($domain.capacity.storage.total.value)$($domain.capacity.storage.total.unit)"
 
     # Retrieve Clusters within the Domain
-    $clusters = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/domains/$($domain.id)/clusters"
-
-    if ($null -eq $clusters) {
-        Write-Error "Failed to retrieve clusters for domain $($domain.displayName)."
-        continue
-    }
-
-    foreach ($cluster in $clusters.elements) {  # Adjusted based on correct JSON key for clusters
-        Write-Host "  Cluster: $($cluster.displayName)"
-        Write-Host "    Cluster ID: $($cluster.id)"
-        
-        # Debug: Print the entire cluster object
-        Write-Host "Cluster Object: $(ConvertTo-Json $cluster -Depth 5)"
+    foreach ($cluster in $domain.clusters) {
+        Write-Host "  Cluster ID: $($cluster.id)"
 
         # Retrieve Hosts within the Cluster
         $hosts = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/clusters/$($cluster.id)/hosts"
 
         if ($null -eq $hosts) {
-            Write-Error "Failed to retrieve hosts for cluster $($cluster.displayName)."
+            Write-Error "Failed to retrieve hosts for cluster $($cluster.id)."
             continue
         }
 
-        foreach ($host in $hosts.elements) {  # Adjusted based on correct JSON key for hosts
-            Write-Host "    Host: $($host.displayName)"
+        foreach ($host in $hosts.elements) {
+            Write-Host "    Host: $($host.name)"
             Write-Host "      Host ID: $($host.id)"
             Write-Host "      Host Status: $($host.status)"
             Write-Host "      Host IP: $($host.managementIp)"
