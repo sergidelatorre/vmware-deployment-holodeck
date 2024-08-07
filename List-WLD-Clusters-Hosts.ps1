@@ -104,9 +104,12 @@ if ($null -eq $workloadDomains) {
     exit
 }
 
+# Debug: Check full JSON response structure
+Write-Host "Full JSON response for domains: $(ConvertTo-Json $workloadDomains -Depth 10)"
+
 # Print Workload Domains and Clusters
-foreach ($domain in $workloadDomains.content) {
-    Write-Host "Workload Domain: $($domain.name)"
+foreach ($domain in $workloadDomains.elements) {  # Assuming the correct JSON key based on documentation
+    Write-Host "Workload Domain: $($domain.displayName)"
     Write-Host "  Domain ID: $($domain.id)"
     Write-Host "  Domain Type: $($domain.domainType)"
 
@@ -117,12 +120,12 @@ foreach ($domain in $workloadDomains.content) {
     $clusters = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/domains/$($domain.id)/clusters"
 
     if ($null -eq $clusters) {
-        Write-Error "Failed to retrieve clusters for domain $($domain.name)."
+        Write-Error "Failed to retrieve clusters for domain $($domain.displayName)."
         continue
     }
 
-    foreach ($cluster in $clusters.content) {
-        Write-Host "  Cluster: $($cluster.name)"
+    foreach ($cluster in $clusters.elements) {  # Adjusted based on correct JSON key for clusters
+        Write-Host "  Cluster: $($cluster.displayName)"
         Write-Host "    Cluster ID: $($cluster.id)"
         
         # Debug: Print the entire cluster object
@@ -132,12 +135,12 @@ foreach ($domain in $workloadDomains.content) {
         $hosts = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/clusters/$($cluster.id)/hosts"
 
         if ($null -eq $hosts) {
-            Write-Error "Failed to retrieve hosts for cluster $($cluster.name)."
+            Write-Error "Failed to retrieve hosts for cluster $($cluster.displayName)."
             continue
         }
 
-        foreach ($host in $hosts.content) {
-            Write-Host "    Host: $($host.name)"
+        foreach ($host in $hosts.elements) {  # Adjusted based on correct JSON key for hosts
+            Write-Host "    Host: $($host.displayName)"
             Write-Host "      Host ID: $($host.id)"
             Write-Host "      Host Status: $($host.status)"
             Write-Host "      Host IP: $($host.managementIp)"
