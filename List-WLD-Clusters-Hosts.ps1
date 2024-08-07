@@ -27,7 +27,7 @@ $credentials = "${SDDCManagerUsername}:${SDDCManagerPassword}"
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($credentials))
 
 # Debugging: Check the base64 encoded credentials (remove or comment this in production)
-# Write-Host "Base64 Encoded Credentials: $base64AuthInfo"
+Write-Host "Base64 Encoded Credentials: $base64AuthInfo"
 
 # Define a function to make API requests to SDDC Manager
 function Invoke-SDDCManagerAPI {
