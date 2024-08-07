@@ -1,4 +1,4 @@
-# PowerCLI Script to Retrieve Information from VMware SDDC Manager
+# PowerCLI Script to Retrieve Information from VMware SDDC Manager using Bearer Token
 
 # Define Credentials
 $CloudBuilderUsername = "admin"
@@ -22,14 +22,40 @@ $ESXiHostsPassword = "VMware123!"
 # Define SDDC Manager URL
 $SDDCManagerURL = "https://sddc-manager.vcf.sddc.lab" # Replace with your actual SDDC Manager URL
 
-# Encode credentials for basic authentication
-$credentials = "${SDDCManagerUsername}:${SDDCManagerPassword}"
-$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($credentials))
+# Function to obtain the Bearer Token
+function Get-SDDCManagerToken {
+    param (
+        [string]$Username,
+        [string]$Password
+    )
 
-# Debugging: Check the base64 encoded credentials (remove or comment this in production)
-Write-Host "Base64 Encoded Credentials: $base64AuthInfo"
+    $body = @{
+        username = $Username
+        password = $Password
+    }
 
-# Define a function to make API requests to SDDC Manager
+    $headers = @{
+        Accept = "application/json"
+    }
+
+    try {
+        $response = Invoke-RestMethod -Uri "$SDDCManagerURL/v1/tokens" -Method "POST" -Headers $headers -Body ($body | ConvertTo-Json) -ContentType "application/json"
+        return $response.accessToken
+    } catch {
+        Write-Error "Failed to obtain access token: $_"
+        return $null
+    }
+}
+
+# Obtain the Bearer Token
+$accessToken = Get-SDDCManagerToken -Username $SDDCManagerUsername -Password $SDDCManagerPassword
+
+if ($null -eq $accessToken) {
+    Write-Error "Failed to retrieve access token. Exiting script."
+    exit
+}
+
+# Define a function to make API requests to SDDC Manager using the Bearer Token
 function Invoke-SDDCManagerAPI {
     param (
         [string]$Method,
@@ -38,7 +64,7 @@ function Invoke-SDDCManagerAPI {
     )
     
     $headers = @{
-        Authorization = "Basic $base64AuthInfo"
+        Authorization = "Bearer $accessToken"
         Accept        = "application/json"
     }
     
