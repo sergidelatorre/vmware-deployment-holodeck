@@ -89,18 +89,56 @@ function Invoke-SDDCManagerAPI {
     }
 }
 
-# Retrieve Workload Domains
-Write-Host "Retrieving workload domains..."
-$workloadDomains = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/domains"
+# Function to retrieve workload domains
+function Get-WorkloadDomains {
+    Write-Host "Retrieving workload domains..."
+    $domains = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/domains"
 
-if ($null -eq $workloadDomains) {
-    Write-Error "Failed to retrieve workload domains."
-    exit
+    if ($null -eq $domains) {
+        Write-Error "Failed to retrieve workload domains."
+        return @()
+    }
+
+    return $domains.elements
 }
 
-# Print Workload Domains
-foreach ($domain in $workloadDomains.elements) {
-    Write-Host "Workload Domain: $($domain.name)"
+# Function to retrieve cluster details
+function Get-ClusterDetails {
+    param (
+        [string]$ClusterId
+    )
+
+    $clusterDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/clusters/$ClusterId"
+
+    if ($null -eq $clusterDetails) {
+        Write-Error "Failed to retrieve details for cluster $ClusterId."
+        return $null
+    }
+
+    return $clusterDetails
+}
+
+# Function to retrieve host details
+function Get-HostDetails {
+    param (
+        [string]$HostId
+    )
+
+    $hostDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/hosts/$HostId"
+
+    if ($null -eq $hostDetails) {
+        Write-Error "Failed to retrieve details for host $HostId."
+        return $null
+    }
+
+    return $hostDetails
+}
+
+# Main script execution
+$domains = Get-WorkloadDomains
+
+foreach ($domain in $domains) {
+    Write-Host "`nWorkload Domain: $($domain.name)"
     Write-Host "  Domain ID: $($domain.id)"
     Write-Host "  Organization Name: $($domain.orgName)"
     Write-Host "  Status: $($domain.status)"
@@ -128,10 +166,9 @@ foreach ($domain in $workloadDomains.elements) {
     # Retrieve Clusters within the Domain
     foreach ($cluster in $domain.clusters) {
         Write-Host "`nRetrieving information for Cluster ID: $($cluster.id)"
-        $clusterDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/clusters/$($cluster.id)"
+        $clusterDetails = Get-ClusterDetails -ClusterId $cluster.id
 
         if ($null -eq $clusterDetails) {
-            Write-Error "Failed to retrieve details for cluster $($cluster.id)."
             continue
         }
 
@@ -152,12 +189,9 @@ foreach ($domain in $workloadDomains.elements) {
         # Retrieve Hosts within the Cluster
         foreach ($esxi in $clusterDetails.hosts) {
             Write-Host "  Host ID: $($esxi.id)"
-
-            # Retrieve Host Details
-            $hostDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/hosts/$($esxi.id)"
+            $hostDetails = Get-HostDetails -HostId $esxi.id
 
             if ($null -eq $hostDetails) {
-                Write-Error "Failed to retrieve details for host $($esxi.id)."
                 continue
             }
 
