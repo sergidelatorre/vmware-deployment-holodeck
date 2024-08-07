@@ -23,7 +23,11 @@ $ESXiHostsPassword = "VMware123!"
 $SDDCManagerURL = "https://sddc-manager.vcf.sddc.lab" # Replace with your actual SDDC Manager URL
 
 # Encode credentials for basic authentication
-$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$($SDDCManagerUsername):$($SDDCManagerPassword)"))
+$credentials = "${SDDCManagerUsername}:${SDDCManagerPassword}"
+$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($credentials))
+
+# Print Base64 Credentials for Debugging (Remove this line in production for security reasons)
+Write-Host "Base64 Encoded Credentials: $base64AuthInfo"
 
 # Define a function to make API requests to SDDC Manager
 function Invoke-SDDCManagerAPI {
@@ -61,7 +65,7 @@ if ($null -eq $workloadDomains) {
 }
 
 # Print Workload Domains and Clusters
-foreach ($domain in $workloadDomains) {
+foreach ($domain in $workloadDomains.content) {
     Write-Host "Workload Domain: $($domain.name)"
     Write-Host "  Domain ID: $($domain.id)"
     Write-Host "  Domain Type: $($domain.domainType)"
@@ -74,7 +78,7 @@ foreach ($domain in $workloadDomains) {
         continue
     }
 
-    foreach ($cluster in $clusters) {
+    foreach ($cluster in $clusters.content) {
         Write-Host "  Cluster: $($cluster.name)"
         Write-Host "    Cluster ID: $($cluster.id)"
         
@@ -86,7 +90,7 @@ foreach ($domain in $workloadDomains) {
             continue
         }
 
-        foreach ($host in $hosts) {
+        foreach ($host in $hosts.content) {
             Write-Host "    Host: $($host.name)"
             Write-Host "      Host ID: $($host.id)"
             Write-Host "      Host Status: $($host.status)"
@@ -94,4 +98,5 @@ foreach ($domain in $workloadDomains) {
         }
     }
 }
+
 
