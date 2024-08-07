@@ -23,11 +23,11 @@ $ESXiHostsPassword = "VMware123!"
 $SDDCManagerURL = "https://sddc-manager.vcf.sddc.lab" # Replace with your actual SDDC Manager URL
 
 # Encode credentials for basic authentication
-$credentials = "$SDDCManagerUsername:$SDDCManagerPassword"
+$credentials = "${SDDCManagerUsername}:${SDDCManagerPassword}"
 $base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($credentials))
 
 # Debugging: Check the base64 encoded credentials (remove or comment this in production)
-Write-Host "Base64 Encoded Credentials: $base64AuthInfo"
+# Write-Host "Base64 Encoded Credentials: $base64AuthInfo"
 
 # Define a function to make API requests to SDDC Manager
 function Invoke-SDDCManagerAPI {
@@ -100,6 +100,3 @@ foreach ($domain in $workloadDomains.content) {
         }
     }
 }
-
-
-
