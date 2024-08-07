@@ -76,18 +76,12 @@ function Invoke-SDDCManagerAPI {
         Accept        = "application/json"
     }
     
-    Write-Host "Making API call to $SDDCManagerURL$ApiEndpoint with method $Method"
-    
     try {
         if ($Body -ne $null) {
             $response = Invoke-RestMethod -Uri "$SDDCManagerURL$ApiEndpoint" -Method $Method -Headers $headers -Body ($Body | ConvertTo-Json) -ContentType "application/json"
         } else {
             $response = Invoke-RestMethod -Uri "$SDDCManagerURL$ApiEndpoint" -Method $Method -Headers $headers
         }
-        
-        # Debug output for the raw response
-        Write-Host "Raw API response: $(ConvertTo-Json $response -Depth 10)"
-        
         return $response
     } catch {
         Write-Error "Error making API call: $_"
@@ -104,8 +98,7 @@ if ($null -eq $workloadDomains) {
     exit
 }
 
-
-# Print Workload Domains and Clusters
+# Print Workload Domains
 foreach ($domain in $workloadDomains.elements) {
     Write-Host "Workload Domain: $($domain.name)"
     Write-Host "  Domain ID: $($domain.id)"
@@ -134,24 +127,43 @@ foreach ($domain in $workloadDomains.elements) {
 
     # Retrieve Clusters within the Domain
     foreach ($cluster in $domain.clusters) {
-        Write-Host "  Cluster ID: $($cluster.id)"
+        Write-Host "`nRetrieving information for Cluster ID: $($cluster.id)"
+        $clusterDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/clusters/$($cluster.id)"
 
-        # Retrieve Hosts within the Cluster
-        $hosts = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/clusters/$($cluster.id)/hosts"
-
-        if ($null -eq $hosts) {
-            Write-Error "Failed to retrieve hosts for cluster $($cluster.id)."
+        if ($null -eq $clusterDetails) {
+            Write-Error "Failed to retrieve details for cluster $($cluster.id)."
             continue
         }
 
-        foreach ($host in $hosts.elements) {
-            Write-Host "    Host: $($host.name)"
-            Write-Host "      Host ID: $($host.id)"
-            Write-Host "      Host Status: $($host.status)"
-            Write-Host "      Host IP: $($host.managementIp)"
+        Write-Host "  Cluster Name: $($clusterDetails.name)"
+        Write-Host "  Cluster Status: $($clusterDetails.status)"
+        Write-Host "  Primary Datastore: $($clusterDetails.primaryDatastoreName)"
+        Write-Host "  Primary Datastore Type: $($clusterDetails.primaryDatastoreType)"
+        Write-Host "  Is Stretched: $($clusterDetails.isStretched)"
+        Write-Host "  Failures To Tolerate: $($clusterDetails.failuresToTolerate)"
+        Write-Host "  Is Image Based: $($clusterDetails.isImageBased)"
 
-            # Debug: Print the entire host object
-            Write-Host "Host Object: $(ConvertTo-Json $host -Depth 5)"
+        # Print cluster capacity
+        Write-Host "  Cluster Capacity:"
+        Write-Host "    CPU: Used - $($clusterDetails.capacity.cpu.used.value)$($clusterDetails.capacity.cpu.used.unit), Total - $($clusterDetails.capacity.cpu.total.value)$($clusterDetails.capacity.cpu.total.unit)"
+        Write-Host "    Memory: Used - $($clusterDetails.capacity.memory.used.value)$($clusterDetails.capacity.memory.used.unit), Total - $($clusterDetails.capacity.memory.total.value)$($clusterDetails.capacity.memory.total.unit)"
+        Write-Host "    Storage: Used - $($clusterDetails.capacity.storage.used.value)$($clusterDetails.capacity.storage.used.unit), Total - $($clusterDetails.capacity.storage.total.value)$($clusterDetails.capacity.storage.total.unit)"
+
+        # Retrieve Hosts within the Cluster
+        foreach ($host in $clusterDetails.hosts) {
+            Write-Host "  Host ID: $($host.id)"
+
+            # Retrieve Host Details
+            $hostDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/hosts/$($host.id)"
+
+            if ($null -eq $hostDetails) {
+                Write-Error "Failed to retrieve details for host $($host.id)."
+                continue
+            }
+
+            Write-Host "    Host Name: $($hostDetails.name)"
+            Write-Host "    Host Status: $($hostDetails.status)"
+            Write-Host "    Host IP: $($hostDetails.managementIp)"
         }
     }
 }
