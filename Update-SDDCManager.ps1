@@ -28,8 +28,11 @@ $SDDCManagerPassword = "VMware123!"
 # Define SDDC Manager URL
 $SDDCManagerURL = "https://sddc-manager.vcf.sddc.lab" # Replace with your actual SDDC Manager URL
 
+# Generate a function that connects to vcenter server
+
 # Encode credentials for basic authentication
-$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("$SDDCManagerUsername:$SDDCManagerPassword")))
+$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("${SDDCManagerUsername}:${SDDCManagerPassword}"))
+
 
 # Define a function to make API requests to SDDC Manager
 function Invoke-SDDCManagerAPI {
