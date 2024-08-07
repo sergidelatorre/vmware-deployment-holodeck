@@ -118,6 +118,22 @@ function Get-ClusterDetails {
     return $clusterDetails
 }
 
+# Function to retrieve NSX cluster details
+function Get-NSXDetails {
+    param (
+        [string]$NSXClusterId
+    )
+
+    $NSXclusterDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/nsxt-clusters/$NSXClusterId"
+
+    if ($null -eq $NSXclusterDetails) {
+        Write-Error "Failed to retrieve details for NSX cluster $NSXClusterId."
+        return $null
+    }
+
+    return $NSXclusterDetails
+}
+
 # Function to retrieve host details
 function Get-HostDetails {
     param (
@@ -162,6 +178,19 @@ foreach ($domain in $domains) {
     Write-Host "    CPU: Used - $($domain.capacity.cpu.used.value)$($domain.capacity.cpu.used.unit), Total - $($domain.capacity.cpu.total.value)$($domain.capacity.cpu.total.unit)"
     Write-Host "    Memory: Used - $($domain.capacity.memory.used.value)$($domain.capacity.memory.used.unit), Total - $($domain.capacity.memory.total.value)$($domain.capacity.memory.total.unit)"
     Write-Host "    Storage: Used - $($domain.capacity.storage.used.value)$($domain.capacity.storage.used.unit), Total - $($domain.capacity.storage.total.value)$($domain.capacity.storage.total.unit)"
+
+    Write-Host " ----------------------------------------------------------- "
+    Write-Host " NSX-T Cluster"
+    Write-Host " ----------------------------------------------------------- "
+    Write-Host "`nRetrieving information for NSX Cluster ID: $($domain.nsxtCluster.id)"
+    $NSXclusterDetails = Get-NSXClusterDetails -NSXClusterId $domain.nsxtCluster.id    
+
+    if ($null -eq $NSXclusterDetails) {
+        continue
+    }
+    Write-Host "  VIP FQDN: $($NSXclusterDetails.vipFqdn)"
+    $NSXManagerURL = $NSXclusterDetails.vipFqdn
+    Write-Host " ----------------------------------------------------------- "
 
     # Retrieve Clusters within the Domain
     foreach ($cluster in $domain.clusters) {
