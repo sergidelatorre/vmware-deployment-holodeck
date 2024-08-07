@@ -1,0 +1,7 @@
+PS C:\Users\Administrator\Documents\vmware-deployment-holodeck\vmware-deployment-holodeck> .\Update-SDDCManager.ps1
+ParserError: C:\Users\Administrator\Documents\vmware-deployment-holodeck\vmware-deployment-holodeck\Update-SDDCManager.ps1:32
+Line |
+  32 |  … tring([Text.Encoding]::ASCII.GetBytes(("$SDDCManagerUsername:$SDDCMan …
+     |                                            ~~~~~~~~~~~~~~~~~~~~~
+     | Variable reference is not valid. ':' was not followed by a valid variable name character. Consider using ${} to
+     | delimit the name.
