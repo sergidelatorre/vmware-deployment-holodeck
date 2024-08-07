@@ -119,7 +119,7 @@ function Get-ClusterDetails {
 }
 
 # Function to retrieve NSX cluster details
-function Get-NSXDetails {
+function Get-NSXClusterDetails {
     param (
         [string]$NSXClusterId
     )
