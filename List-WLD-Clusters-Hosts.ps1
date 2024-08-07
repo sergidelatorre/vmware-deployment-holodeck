@@ -39,7 +39,15 @@ function Get-SDDCManagerToken {
     }
 
     try {
+        Write-Host "Attempting to obtain access token..."
         $response = Invoke-RestMethod -Uri "$SDDCManagerURL/v1/tokens" -Method "POST" -Headers $headers -Body ($body | ConvertTo-Json) -ContentType "application/json"
+        
+        if ($response.accessToken) {
+            Write-Host "Access token retrieved successfully."
+        } else {
+            Write-Host "No access token received."
+        }
+
         return $response.accessToken
     } catch {
         Write-Error "Failed to obtain access token: $_"
@@ -76,6 +84,10 @@ function Invoke-SDDCManagerAPI {
         } else {
             $response = Invoke-RestMethod -Uri "$SDDCManagerURL$ApiEndpoint" -Method $Method -Headers $headers
         }
+        
+        # Debug output for the raw response
+        Write-Host "Raw API response: $(ConvertTo-Json $response -Depth 10)"
+        
         return $response
     } catch {
         Write-Error "Error making API call: $_"
@@ -98,6 +110,9 @@ foreach ($domain in $workloadDomains.content) {
     Write-Host "  Domain ID: $($domain.id)"
     Write-Host "  Domain Type: $($domain.domainType)"
 
+    # Debug: Print the entire domain object
+    Write-Host "Domain Object: $(ConvertTo-Json $domain -Depth 5)"
+
     # Retrieve Clusters within the Domain
     $clusters = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/domains/$($domain.id)/clusters"
 
@@ -110,6 +125,9 @@ foreach ($domain in $workloadDomains.content) {
         Write-Host "  Cluster: $($cluster.name)"
         Write-Host "    Cluster ID: $($cluster.id)"
         
+        # Debug: Print the entire cluster object
+        Write-Host "Cluster Object: $(ConvertTo-Json $cluster -Depth 5)"
+
         # Retrieve Hosts within the Cluster
         $hosts = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/clusters/$($cluster.id)/hosts"
 
@@ -123,6 +141,9 @@ foreach ($domain in $workloadDomains.content) {
             Write-Host "      Host ID: $($host.id)"
             Write-Host "      Host Status: $($host.status)"
             Write-Host "      Host IP: $($host.managementIp)"
+
+            # Debug: Print the entire host object
+            Write-Host "Host Object: $(ConvertTo-Json $host -Depth 5)"
         }
     }
 }
