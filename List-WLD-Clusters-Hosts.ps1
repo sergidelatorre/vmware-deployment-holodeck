@@ -150,14 +150,14 @@ foreach ($domain in $workloadDomains.elements) {
         Write-Host "    Storage: Used - $($clusterDetails.capacity.storage.used.value)$($clusterDetails.capacity.storage.used.unit), Total - $($clusterDetails.capacity.storage.total.value)$($clusterDetails.capacity.storage.total.unit)"
 
         # Retrieve Hosts within the Cluster
-        foreach ($host in $clusterDetails.hosts) {
-            Write-Host "  Host ID: $($host.id)"
+        foreach ($esxi in $clusterDetails.hosts) {
+            Write-Host "  Host ID: $($esxi.id)"
 
             # Retrieve Host Details
-            $hostDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/hosts/$($host.id)"
+            $hostDetails = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/hosts/$($esxi.id)"
 
             if ($null -eq $hostDetails) {
-                Write-Error "Failed to retrieve details for host $($host.id)."
+                Write-Error "Failed to retrieve details for host $($esxi.id)."
                 continue
             }
 
