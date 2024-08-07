@@ -19,80 +19,90 @@ $NSXManagerPassword = "VMware123!VMware123!"
 $ESXiHostsUsername = "root"
 $ESXiHostsPassword = "VMware123!"
 
+# PowerCLI Script to Update VMware SDDC Manager
+
+# Define Credentials for SDDC Manager
+$SDDCManagerUsername = "administrator@vsphere.local"
+$SDDCManagerPassword = "VMware123!"
+
 # Define SDDC Manager URL
-$SDDCManagerURL = "https://sddc-manager.example.com" # Replace with your actual SDDC Manager URL
+$SDDCManagerURL = "https://sddc-manager.vcf.sddc.lab" # Replace with your actual SDDC Manager URL
 
-# Connect to SDDC Manager
-Write-Host "Connecting to SDDC Manager..."
-$connection = Connect-VIServer -Server $SDDCManagerURL -User $SDDCManagerUsername -Password $SDDCManagerPassword
+# Encode credentials for basic authentication
+$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("$SDDCManagerUsername:$SDDCManagerPassword")))
 
-if ($connection) {
-    Write-Host "Connected to SDDC Manager at $SDDCManagerURL"
-} else {
-    Write-Error "Failed to connect to SDDC Manager"
-    exit
+# Define a function to make API requests to SDDC Manager
+function Invoke-SDDCManagerAPI {
+    param (
+        [string]$Method,
+        [string]$ApiEndpoint,
+        [hashtable]$Body = $null
+    )
+    
+    $headers = @{
+        Authorization = "Basic $base64AuthInfo"
+        Accept        = "application/json"
+    }
+    
+    if ($Body -ne $null) {
+        $response = Invoke-RestMethod -Uri "$SDDCManagerURL$ApiEndpoint" -Method $Method -Headers $headers -Body ($Body | ConvertTo-Json) -ContentType "application/json"
+    } else {
+        $response = Invoke-RestMethod -Uri "$SDDCManagerURL$ApiEndpoint" -Method $Method -Headers $headers
+    }
+    
+    return $response
 }
 
 # Retrieve Available Updates
 Write-Host "Retrieving available updates..."
-$apiUrl = "$SDDCManagerURL/v1/update/available"
-
 try {
-    $availableUpdates = Invoke-RestMethod -Method Get -Uri $apiUrl -Credential (New-Object System.Management.Automation.PSCredential($SDDCManagerUsername, (ConvertTo-SecureString $SDDCManagerPassword -AsPlainText -Force)))
+    $availableUpdates = Invoke-SDDCManagerAPI -Method "GET" -ApiEndpoint "/v1/api/update/available"
 } catch {
     Write-Error "Failed to retrieve updates: $_"
-    Disconnect-VIServer -Server $SDDCManagerURL -Confirm:$false
     exit
 }
 
 # Check if updates are available
-if ($availableUpdates.updates.Count -eq 0) {
+if ($availableUpdates.items.Count -eq 0) {
     Write-Host "No updates available."
-    Disconnect-VIServer -Server $SDDCManagerURL -Confirm:$false
     exit
 }
 
 # List Available Updates
 Write-Host "Available Updates:"
-$availableUpdates.updates | ForEach-Object {
-    Write-Host "Release Name: $($_.releaseName), Version: $($_.version), Released On: $($_.releasedDate)"
+$availableUpdates.items | ForEach-Object {
+    Write-Host "Release Name: $($_.releaseName), Version: $($_.version), Released On: $($_.releaseDate)"
 }
 
 # Get the latest update
-$latestUpdate = $availableUpdates.updates | Sort-Object -Property releasedDate -Descending | Select-Object -First 1
+$latestUpdate = $availableUpdates.items | Sort-Object -Property releaseDate -Descending | Select-Object -First 1
 
 Write-Host "Latest Update Available:"
-Write-Host "Release Name: $($latestUpdate.releaseName), Version: $($latestUpdate.version), Released On: $($latestUpdate.releasedDate)"
+Write-Host "Release Name: $($latestUpdate.releaseName), Version: $($latestUpdate.version), Released On: $($latestUpdate.releaseDate)"
 
 # Confirm update execution
 $confirmUpdate = Read-Host "Do you want to apply the latest update? (yes/no)"
 if ($confirmUpdate -ne "yes") {
     Write-Host "Update canceled."
-    Disconnect-VIServer -Server $SDDCManagerURL -Confirm:$false
     exit
 }
 
 # Execute Update
 Write-Host "Executing update to latest release: $($latestUpdate.releaseName)"
-$updateApiUrl = "$SDDCManagerURL/v1/update/execute"
-$updateBody = @{
-    releaseId = $latestUpdate.id
-} | ConvertTo-Json
-
 try {
-    $response = Invoke-RestMethod -Method Post -Uri $updateApiUrl -Credential (New-Object System.Management.Automation.PSCredential($SDDCManagerUsername, (ConvertTo-SecureString $SDDCManagerPassword -AsPlainText -Force))) -Body $updateBody -ContentType "application/json"
+    $updateBody = @{
+        updateId = $latestUpdate.updateId
+    }
+
+    $updateResponse = Invoke-SDDCManagerAPI -Method "POST" -ApiEndpoint "/v1/api/update/execute" -Body $updateBody
 } catch {
     Write-Error "Failed to execute update: $_"
-    Disconnect-VIServer -Server $SDDCManagerURL -Confirm:$false
     exit
 }
 
 # Check update response
-if ($response.status -eq "success") {
+if ($updateResponse.status -eq "success") {
     Write-Host "Update executed successfully. Please monitor the update progress in SDDC Manager."
 } else {
-    Write-Error "Update execution failed: $($response.errorMessage)"
+    Write-Error "Update execution failed: $($updateResponse.errorMessage)"
 }
-
-# Disconnect from SDDC Manager
-Disconnect-VIServer -Server $SDDCManagerURL -Confirm:$false
